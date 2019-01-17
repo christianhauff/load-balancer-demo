@@ -1,0 +1,713 @@
+<html>
+<style>
+.fullscreen {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    left: 0px;
+    top: 0px;
+}
+.foreground {
+    z-index: 12;
+}
+
+.background {
+    z-index: 10;
+    /* background: #272b30; */
+    background: #000;
+}
+
+.code {
+    background-color: grey;
+    color: black;
+}
+</style>
+<head>
+    <meta charset="UTF-8"> 
+</head>
+<body>
+<canvas class="fullscreen foreground" id="animationCanvas"></canvas>
+<canvas class="fullscreen background" id="fixCanvas"></canvas>
+<span id="debugStats" style="position: fixed; left: 5px; bottom: 0px; height: 50px; width: 100px; color: rgb(198, 206, 216); z-index: 13;"></span>
+<span id="url" style="position: absolute; top: 30px; left: 0px; right: 0px; text-align: center;color: white;z-index: 15; font: 30px 'Open Sans', sans-serif; display: none;">http://159.69.26.56/</span>
+
+<span id="help" style="bottom: 10px; right: 10px; z-index: 15; font: 15px 'Open Sans', sans-serif; color: white; position: absolute; display: none;">
+Help:<br>
+<span class="code">1</span>,<span class="code">2</span>,<span class="code">3</span>,<span class="code">4</span>: Particle to 1,2,3,4<br>
+<span class="code">q</span>,<span class="code">w</span>,<span class="code">e</span>: Green Particle<br>
+<span class="code">a</span>,<span class="code">s</span>,<span class="code">d</span>: Red Particle<br>
+<span class="code">r</span>,<span class="code">t</span>,<span class="code">z</span>: Direct Green Particle<br>
+<span class="code">c</span>: Clear
+<span class="code">x</span>: Statistics
+<span class="code">u</span>: URL
+<span class="code">h</span>: Help
+</span>
+
+<script>
+var animationCanvas = document.getElementById('animationCanvas');
+var animationContext = animationCanvas.getContext('2d');
+
+var fixCanvas = document.getElementById('fixCanvas');
+var fixContext = fixCanvas.getContext('2d');
+
+particleSpeed = 10;
+fps = 60;
+particleRadius = 5;
+fadeRate = 8;
+runtimeFactor = 300;
+useFade = false;
+normalizeAll = false;
+particleList = [];
+gwTop = [];
+gwBottom = [];
+gwMiddle = [];
+gw2Bottom = [];
+gw2Top = [];
+serviceCoord = [];
+proactive = true;
+usePrintStats = true;
+lastMicroSeconds = 0;
+measuredFPS = 0;
+statCounter = 0;
+
+numServices = 0;
+
+//textColor = "#878B90";
+textColor = "#fff";
+lineColor = "#878B90";
+connectionColor = "#888";
+// lineColor = "#fff";
+connectionLineWidth = 3;
+
+services = [
+    {
+        title: "Service green 1",
+        textColor: "greenyellow",
+        lineColor: lineColor
+    },
+    {
+        title: "Service green 2",
+        textColor: "greenyellow",
+        lineColor: lineColor
+    },
+    {
+        title: "Service red 1",
+        textColor: "red",
+        lineColor: lineColor
+    },
+    {
+        title: "Service red 2",
+        textColor: "red",
+        lineColor: lineColor
+    },
+];
+
+numServices = services.length;
+
+// react on window resize
+window.addEventListener("resize", resize, false);
+
+window.onkeyup = function(e) {
+   var key = e.keyCode ? e.keyCode : e.which;
+
+    if (key == 49) { //1
+        //particleList.push(new Particle(paths.to1.concat(paths.return), "green", false))
+        particleList.push(new Particle(paths.toWait.concat(paths.to1.concat(paths.return)), "greenyellow", false))
+    }
+    else if (key == 50) { //2
+        particleList.push(new Particle(paths.toWait.concat(paths.to2.concat(paths.return)), "greenyellow", false))
+    }
+    else if (key == 51) { //3
+        particleList.push(new Particle(paths.toWait.concat(paths.to3.concat(paths.return)), "red", false))
+    }
+    else if (key == 52) { //4
+        particleList.push(new Particle(paths.toWait.concat(paths.to4.concat(paths.return)), "red", false))
+    }
+    else if (key == 67) { //c
+        particleList.splice(0,particleList.length);
+    }
+    else if (key == 81) { //q
+        particleList.push(new Particle(paths.toWait, "greenyellow", true, "demoParticle"))
+    }
+    else if (key == 87) { //w
+        particle = getParticle("demoParticle")
+        if (particle) {
+            particle.appendPath(paths.to1);
+        }
+    }
+    else if (key == 69) { //e
+        particle = getParticle("demoParticle")
+        if (particle) {
+            particle.appendPath(paths.return)
+            particle.waitOnEnd = false;
+        }
+    }
+    else if (key == 65) { //a
+        particleList.push(new Particle(paths.toWait, "red", true, "demoParticleRed"))
+    }
+    else if (key == 83) { //s
+        particle = getParticle("demoParticleRed")
+        if (particle) {
+            particle.appendPath(paths.to3);
+        }
+    }
+    else if (key == 68) { //d
+        particle = getParticle("demoParticleRed")
+        if (particle) {
+            particle.appendPath(paths.return)
+            particle.waitOnEnd = false;
+        }
+    }
+    else if (key == 82) { //r
+        particleList.push(new Particle(paths.toWait, "greenyellow", true, "demoParticleDirect"))
+    }
+    else if (key == 84) { //t
+        particle = getParticle("demoParticleDirect")
+        if (particle) {
+            particle.appendPath([Leg(w/2, h), LegPoint(serviceCoord[0])]);
+        }
+    }
+    else if (key == 90) { //z
+        particle = getParticle("demoParticleDirect")
+        if (particle) {
+            particle.appendPath([Leg(w/2, h)])
+            particle.waitOnEnd = false;
+        }
+    }
+    else if (key == 88) { //x
+        if (usePrintStats) {
+            usePrintStats = false;
+        }
+        else {
+            usePrintStats = true;
+        }
+    }
+
+    else if (key == 85) { //u
+        if (document.getElementById("url").style.display == "none") {
+            document.getElementById("url").style.display = "block";
+        }
+        else {
+            document.getElementById("url").style.display = "none";
+        }
+    }
+
+    else if (key == 72) { //h
+        if (document.getElementById("help").style.display == "none") {
+            document.getElementById("help").style.display = "block";
+        }
+        else {
+            document.getElementById("help").style.display = "none";
+        }
+    }
+}
+
+class ServiceTimer {
+    constructor(service) {
+        this.service = service;
+        this.startTime = 0;
+        this.waitTime = 0;
+    }
+
+    drawLoadingCircle(percentage) {
+        // context.arc(x, y, r, startAngle, endAngle, counterclockwise)
+
+        var radAngle = 2*Math.PI / 100 * percentage;
+
+        animationContext.beginPath();
+        var circlx = serviceCoord[this.service][0];
+        var circly = serviceCoord[this.service][1]-110;
+        animationContext.lineWidth = 4;
+        animationContext.strokeStyle = "#ffffff";
+        animationContext.arc(circlx, circly, 20, 0, radAngle, false);
+        animationContext.stroke();
+    }
+
+    setZero() {
+        this.startTime = window.performance.now();
+    }
+
+    draw() {
+        if (!this.startTime == 0 && this.waitTime > 1000) {
+            
+            var currentTime = window.performance.now();
+
+            if (currentTime <= this.startTime + this.waitTime) {
+
+                var percentage = 100 / this.waitTime * (currentTime-this.startTime)
+                this.drawLoadingCircle(percentage);
+
+            }
+        }
+    }
+
+}
+
+/**
+ * {"id":"9y43iyt44dv","status":"waiting","color":"green","instance":"none"}
+ * {"id":"9y43iyt44dv","status":"toService","color":"green","instance":2}
+ * {"id":"9y43iyt44dv","status":"return","color":"green","instance":2}
+ */
+
+paths = {};
+resize();
+
+serviceTimers = [];
+
+for (i=0; i < services.length; i++) {
+    serviceTimers.push(new ServiceTimer(i))
+}
+
+draw();
+
+var connection = new WebSocket('ws://159.69.26.56:3001');
+connection.onmessage = function (e) {
+    console.log('Server: ' + e.data);
+    try {
+        data = JSON.parse(e.data)
+    }
+    catch {
+        data = null;
+    }
+    if (data) {
+        switch (data.status) {
+            case "waiting":
+                if (!['green','red'].includes(data.color)) {
+                    console.log('Color ' + data.color + ' not supported');
+                    break;
+                }
+                if (data.id == "") {
+                    console.log('ID not set');
+                    break;
+                }
+
+                if (getParticle(data.id)) {
+                    console.log("Particle " + data.id + " already waiting, continuing!")
+                }
+                else {
+                    if (data.color == "green") {
+                        particleList.push(new Particle(paths.toWait, "greenyellow", true, data.id))
+                    }
+                    else if (data.color == "red") {
+                        particleList.push(new Particle(paths.toWait, "red", true, data.id))
+                    }
+                }
+                break;
+
+            case "toService":
+                particle = getParticle(data.id)
+                if (particle) {
+                    if (data.color == "green" && data.instance == 1) {
+                        particle.appendPath(paths.to1);
+                        serviceTimers[0].setZero();
+                        serviceTimers[0].waitTime = data.timeout;
+                    }
+                    else if (data.color == "green" && data.instance == 2) {
+                        particle.appendPath(paths.to2);
+                        serviceTimers[1].setZero();
+                        serviceTimers[1].waitTime = data.timeout;
+                    }
+                    else if (data.color == "red" && data.instance == 1) {
+                        particle.appendPath(paths.to3);
+                        serviceTimers[2].setZero();
+                        serviceTimers[2].waitTime = data.timeout;
+                    }
+                    else if (data.color == "red" && data.instance == 2) {
+                        particle.appendPath(paths.to4);
+                        serviceTimers[3].setZero();
+                        serviceTimers[3].waitTime = data.timeout;
+                    }
+                    else {
+                        console.log("Unsupported Combination of Color " + data.color + " and instance " + data.instance)
+                    }
+                }
+                else {
+                    //create particle
+                    if (data.color == "green" && data.instance == 1) {
+                        particleList.push(new Particle(paths.toWait.concat(paths.to1), "greenyellow", true, data.id))
+                        serviceTimers[0].setZero();
+                        serviceTimers[0].waitTime = data.timeout;
+                    }
+                    else if (data.color == "green" && data.instance == 2) {
+                        particleList.push(new Particle(paths.toWait.concat(paths.to2), "greenyellow", true, data.id))
+                        serviceTimers[1].setZero();
+                        serviceTimers[1].waitTime = data.timeout;
+                    }
+                    else if (data.color == "red" && data.instance == 1) {
+                        particleList.push(new Particle(paths.toWait.concat(paths.to3), "red", true, data.id))
+                        serviceTimers[2].setZero();
+                        serviceTimers[2].waitTime = data.timeout;
+                    }
+                    else if (data.color == "red" && data.instance == 2) {
+                        particleList.push(new Particle(paths.toWait.concat(paths.to4), "red", true, data.id))
+                        serviceTimers[3].setZero();
+                        serviceTimers[3].waitTime = data.timeout;
+                    }
+                    else {
+                        console.log("Unsupported Combination of Color " + data.color + " and instance " + data.instance)
+                    }
+                }
+                break;
+
+            case "return":
+                particle = getParticle(data.id)
+                if (particle) {
+                    particle.appendPath(paths.return)
+                    particle.waitOnEnd = false;
+                }
+                break;
+        }
+    }
+};
+
+timer = setInterval(draw, 1000/fps);
+//draw();
+
+function resize() {
+    animationCanvas.width = document.body.clientWidth;
+    animationCanvas.height = document.body.clientHeight;
+
+    fixCanvas.width = document.body.clientWidth;
+    fixCanvas.height = document.body.clientHeight;
+
+    w = animationCanvas.width;
+    h = animationCanvas.height;
+
+    drawRectangles();
+    drawConnections();
+
+    paths = {
+        "to1": [LegPoint(gwTop, 0), LegPoint(serviceCoord[0], 250)],
+        "to2": [LegPoint(gwTop, 0), LegPoint(serviceCoord[1], 250)],
+        "to3": [LegPoint(gwTop, 0), LegPoint(serviceCoord[2], 250)],
+        "to4": [LegPoint(gwTop, 0), LegPoint(serviceCoord[3], 250)],
+        "toWait": [Leg(w/2, h, 0), LegPoint(gwMiddle, 0)],
+        "return": [LegPoint(gwTop, 250), Leg(w/2, h, 0)]
+    }
+}
+
+function draw() {
+    animationContext.clearRect(0, 0, animationCanvas.width, animationCanvas.height);
+    cleanup();
+    moveParticles();
+    drawParticles();
+    for (i=0; i<serviceTimers.length;i++) {
+        serviceTimers[i].draw();
+    }
+    printStats();
+}
+
+function drawRectangles() {
+    var lwidth = 200;
+    var lheight = 100;
+    var swidth = 150;
+    var sheight = 80;
+    
+    drawRoundedRectangle(fixContext, w/2-lwidth/2, 0.6*h , lwidth, lheight, 10);
+    drawRoundedRectangle(fixContext, w/2-70, 0.6*h+130, 140, 50, 10)
+
+    gwTop = [w/2, 0.6*h];
+    gwBottom = [w/2, 0.6*h+lheight];
+    gwMiddle = [w/2, 0.6*h+(lheight/2)]
+
+    gw2Bottom = [w/2, 0.6*h+180];
+    gw2Top = [w/2, 0.6*h+130];
+
+    fixContext.font = "20px Arial";
+    fixContext.textAlign = "center";
+    fixContext.fillStyle = textColor;
+
+    fixContext.fillText("Load Balancer", w/2, 0.6*h+0.5*lheight+10);
+    fixContext.fillText("Gateway", w/2, 0.6*h+162)
+    
+    var space = (w - numServices * swidth) / (numServices+1);
+    var xleft = space;
+
+    serviceCoord = [];
+
+    numServices = services.length;
+
+    for (i=0; i<numServices; i++) {
+        //calculate points for numServices services
+        
+        drawRoundedRectangle(fixContext, xleft, 0.2*h, swidth, sheight, 10, services[i].lineColor);
+
+        serviceCoord.push([xleft+0.5*swidth, 0.2*h+sheight]);
+
+        fixContext.fillStyle = services[i].textColor;
+        fixContext.fillText(services[i].title, xleft+0.5*swidth, 0.2*h+sheight/2+10); 
+        xleft += swidth + space;
+    }
+}
+
+function drawConnections() {
+    // fixContext.setLineDash([5, 3]);
+    fixContext.setLineDash([3, 3]);
+    fixContext.strokeStyle = connectionColor;
+    fixContext.lineWidth = connectionLineWidth;
+
+    for (i=0; i<numServices; i++) {
+        fixContext.beginPath();
+        fixContext.moveTo(gwTop[0], gwTop[1]);
+        fixContext.lineTo(serviceCoord[i][0], serviceCoord[i][1]);
+        fixContext.stroke();
+    }
+
+    fixContext.beginPath();
+    fixContext.moveTo(w/2, h);
+    fixContext.lineTo(gw2Bottom[0], gw2Bottom[1]);
+    fixContext.stroke();
+
+    fixContext.beginPath();
+    fixContext.moveTo(gw2Top[0], gw2Top[1]);
+    fixContext.lineTo(gwBottom[0], gwBottom[1]);
+    fixContext.stroke();
+
+}
+
+function drawRoundedRectangle(Context, x, y, width, height, radius, color = lineColor) {
+    Context.setLineDash([]);
+    fixContext.strokeStyle = color;
+    Context.beginPath();
+    Context.moveTo(x + radius, y);
+    Context.lineTo(x + width - radius, y);
+    Context.arcTo(x + width, y, x + width, y + radius, radius);
+    Context.lineTo(x + width, y + height - radius);
+    Context.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+    Context.lineTo(x + radius, y + height);
+    Context.arcTo(x, y + height, x, y + height - radius, radius);
+    Context.lineTo(x, y + radius);
+    Context.arcTo(x, y, x + radius, y, radius);
+    
+    Context.lineWidth = 5;
+    Context.stroke();
+}
+
+function getParticle(id) {
+    for (let p = 0; p < particleList.length; p++) {
+        const particle = particleList[p];
+        if (particle.id == id) {
+            return particle;
+        }
+    }
+    return false
+}
+
+function cleanup() {
+    for (let i = particleList.length-1; i >= 0; i--) {
+        const p = particleList[i];
+        if (p.path.length == 0) {
+            if (!p.waitOnEnd) {
+                particleList.splice(i, 1)
+            }
+        }
+    }
+}
+
+function moveParticles() {
+    for (let i = 0; i < particleList.length; i++) {
+        const p = particleList[i];
+        p.animate();
+    }
+}
+
+function drawParticles() {
+    for (i=0; i<particleList.length; i++) {
+        animationContext.beginPath();
+        animationContext.arc(particleList[i].x, particleList[i].y, particleRadius, 0, 2 * Math.PI, false);
+        if (typeof particleList[i].color !== 'undefined') {
+            animationContext.fillStyle = particleList[i].color;
+        }
+        else {
+            animationContext.fillStyle = '#fff';
+        }
+        animationContext.fill();
+    }
+}
+
+function Leg(x, y, speed=0) {
+    return {
+        x: x,
+        y: y,
+        speed: speed
+    }
+}
+
+function LegPoint(point, speed=0) {
+    return {
+        x: point[0],
+        y: point[1],
+        speed: speed
+    }
+}
+
+function clone(obj) {
+    return Object.create(obj)
+}
+
+class Particle {
+
+    constructor(path, color = "#fff", waitOnEnd = false, id = "") {
+        this.path = clone(path);
+        this.color = color;
+        this.waitOnEnd = waitOnEnd;
+        this.id = id;
+        this.x = clone(path)[0].x;
+        this.y = clone(path)[0].y;
+        this.velx = 0;
+        this.vely = 0;
+        this.circling = false;
+        this.circx = 0;
+        this.circy = 0;
+        this.circAngle = 0;
+    }
+
+    animate() {
+        if (this.circling) {
+            //animate circling
+            if (this.path.length > 0) {
+                this.circling = false;
+                this.calculateMovement()
+                this.moveParticle();
+            }
+            else {
+                this.moveCircle()
+            }
+        }
+        else {
+            if (this.reachedNext()) {
+                this.circx = this.path[0].x;
+                this.circy = this.path[0].y;
+                this.x = this.path[0].x;
+                this.y = this.path[0].y;
+                this.path.splice(0,1)
+                if (this.path.length == 0) {
+                    this.circling = true;
+                }
+                else {
+                    this.calculateMovement();
+                }
+            }
+            this.moveParticle()
+        }
+    }
+
+    calculateMovement() {
+        if (this.path[0].speed == 0) {
+            
+            var vectorlength = Math.sqrt(Math.pow((this.path[0].x-this.x),2)+Math.pow((this.path[0].y-this.y),2));
+            this.velx = (this.path[0].x-this.x)/vectorlength*particleSpeed;
+            this.vely = (this.path[0].y-this.y)/vectorlength*particleSpeed;
+        }
+        else {
+            // calculate from distance
+            this.velx = (this.path[0].x-this.x)/this.path[0].speed*particleSpeed;
+            this.vely = (this.path[0].y-this.y)/this.path[0].speed*particleSpeed;
+        }
+    }
+
+    moveParticle() {
+        this.x += this.velx;
+        this.y += this.vely;
+    }
+
+    moveCircle() {
+        let radius = 20;
+        let angleIncrease = 2*Math.PI*0.03;
+
+        this.x = this.circx + radius * Math.cos(this.circAngle);
+        this.y = this.circy + radius* Math.sin(this.circAngle);
+
+        this.circAngle += angleIncrease;
+
+        if (this.circAngle > 2*Math.PI) {
+            this.circAngle -= 2*Math.PI;
+        }
+
+    }
+
+    reachedNext() {
+        // Already check the next iteration step to avoid "overshooting"
+
+        var checkx = this.x;
+        var checky = this.y;
+
+        if (checkx == this.path[0].x && checky == this.path[0].y) {
+            return true;
+        }
+
+        if (proactive) {
+            checkx = this.x + this.velx;
+            checky = this.y + this.vely;
+        }
+        
+        if (this.velx > 0) {
+            if (checkx >= this.path[0].x) {
+                return true;
+            }
+        }
+        else if (this.velx < 0) {
+            if (checkx <= this.path[0].x) {
+                return true;
+            }
+        }
+        if (this.vely > 0) {
+            if (checky >= this.path[0].y) {
+                return true;
+            }
+        }
+        else if (this.vely < 0) {
+            if (checky <= this.path[0].y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    appendPath(newPath) {
+
+        for (i=0; i<newPath.length; i++) {
+            this.path.push(newPath[i]);
+        }
+    }
+
+}
+
+
+
+function toggleRuntime() {
+    checkbox = document.getElementById("toggleruntime");
+    if (checkbox.checked) {
+        //runtimeFactor = 500;
+        particleSpeed = 3;
+    }
+    else {
+        //runtimeFactor = 200;
+        particleSpeed = 10;
+    }
+}
+
+function printStats() {
+    if (!usePrintStats) {
+        document.getElementById("debugStats").innerHTML = "";
+    }
+    else {
+        if (statCounter == 4) {
+            var diff = window.performance.now() - lastMicroSeconds;
+            lastMicroSeconds = window.performance.now();
+            measuredFPS = (1 / (diff / 1000)) * 5;
+            statCounter = 0;
+        }
+        else {
+            statCounter += 1;
+        }
+        var out = "FPS: " + Math.round(measuredFPS) + "<br>"
+        out += "Particles: " + particleList.length
+        document.getElementById("debugStats").innerHTML = out;
+    }
+}
+
+</script>
+
+</body>
+</html>

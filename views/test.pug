@@ -1,0 +1,34 @@
+doctype html
+html
+  head
+    title= title
+    meta(name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0')
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='https://code.jquery.com/jquery-3.3.1.min.js')
+    script const intervalSeconds = #{time};
+    script(src='/javascripts/functions.js')
+    script(src='/javascripts/cookie.js')
+    script(src='/javascripts/test.js')
+    script writeCookie('#{id}');
+  body
+    h1= title
+    button(class='userButtons' id='btn-green' onclick='btnPressed(\'green\');')
+    button(class='userButtons' id='btn-red' onclick='btnPressed(\'red\');')
+    br
+    br
+    hr
+    br
+    br
+    button(class='typeButtons btn-test' onclick='setType(\'fast\');') Fast
+    button(class='typeButtons btn-test' onclick='setType(\'normal\');') Normal
+    button(class='typeButtons btn-test' onclick='setType(\'slow\');') Slow
+    br
+    br
+    button(class='testButtons btn-test' onclick='clearAll();') Clear
+    button(class='testButtons btn-test' onclick='testCase1();') G
+    button(class='testButtons btn-test' onclick='testCase2();') G &amp; R
+    br
+    br
+    hr
+    p(id='output')
+    p(id='debug')

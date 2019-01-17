@@ -1,0 +1,17 @@
+doctype html
+html
+  head
+    title= title
+    meta(name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0')
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='https://code.jquery.com/jquery-3.3.1.min.js')
+    script const intervalSeconds = #{time};
+    script(src='/javascripts/functions.js')
+    script(src='/javascripts/cookie.js')
+    script writeCookie('#{id}');
+  body
+    h1= title
+    button(class='userButtons' id='btn-green' onclick='btnPressed(\'green\');')
+    button(class='userButtons' id='btn-red' onclick='btnPressed(\'red\');')
+    p(id='output')
+    p(id='debug')

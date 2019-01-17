@@ -1,0 +1,43 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#output {
+  font-size: 15pt;
+}
+
+.userButtons {
+  height: 150px;
+  width: 150px;
+  margin-right: 10px;
+}
+
+.typeButtons {
+  height: 100px;
+  width: 100px;
+  margin-right: 10px;
+}
+
+.testButtons {
+  height: 150px;
+  width: 150px;
+  margin-right: 10px;
+}
+
+#btn-green {
+  background-color: green;
+}
+
+#btn-red {
+  background-color: red;
+}
+
+.btn-test {
+  background-color: gray;
+  font-size: 125%
+}
