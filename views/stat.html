@@ -404,7 +404,7 @@ function drawRectangles() {
     var sheight = 80;
     
     drawRoundedRectangle(fixContext, w/2-lwidth/2, 0.6*h , lwidth, lheight, 10);
-    drawRoundedRectangle(fixContext, w/2-70, 0.6*h+130, 140, 50, 10)
+    drawRoundedRectangle(fixContext, w/2-140, 0.6*h-20, 280, 180, 10)
 
     gwTop = [w/2, 0.6*h];
     gwBottom = [w/2, 0.6*h+lheight];
@@ -418,7 +418,7 @@ function drawRectangles() {
     fixContext.fillStyle = textColor;
 
     fixContext.fillText("Load Balancer", w/2, 0.6*h+0.5*lheight+10);
-    fixContext.fillText("Gateway", w/2, 0.6*h+162)
+    fixContext.fillText("Gateway", w/2, 0.6*h+137)
     
     var space = (w - numServices * swidth) / (numServices+1);
     var xleft = space;
@@ -455,11 +455,11 @@ function drawConnections() {
 
     fixContext.beginPath();
     fixContext.moveTo(w/2, h);
-    fixContext.lineTo(gw2Bottom[0], gw2Bottom[1]);
+    fixContext.lineTo(gw2Bottom[0], gw2Bottom[1]-40);
     fixContext.stroke();
 
     fixContext.beginPath();
-    fixContext.moveTo(gw2Top[0], gw2Top[1]);
+    fixContext.moveTo(gw2Top[0], gw2Top[1]-10);
     fixContext.lineTo(gwBottom[0], gwBottom[1]);
     fixContext.stroke();
 
